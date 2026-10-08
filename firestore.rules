@@ -1,0 +1,172 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Auth Helpers
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == 'mdskazisohag@gmail.com' ||
+         request.auth.token.email == 'admin@ptenit.com' ||
+         request.auth.token.role == 'admin');
+    }
+
+    // 1. Users Collection
+    // Public read for instructor/seller/author display
+    // Anyone can create (signup flow), owner or admin can update, admin can delete
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 2. Public Catalog Collections (Courses, Services, Digital Products, Gallery, Testimonials, Content, Site Settings)
+    // Public can read, only admin can create/update/delete
+    match /courses/{courseId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /digitalProducts/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /gallery/{galleryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /testimonials/{testimonialId} {
+      allow read: if true;
+      allow create: if isAuthenticated() || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    match /writtenContent/{contentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /siteSettings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 3. Marketplace (Gigs, Jobs, Proposals)
+    match /gigs/{gigId} {
+      allow read: if true;
+      allow create: if isAuthenticated() || isAdmin();
+      allow update, delete: if isAuthenticated() && (resource.data.sellerId == request.auth.uid || isAdmin());
+    }
+
+    match /jobs/{jobId} {
+      allow read: if true;
+      allow create: if isAuthenticated() || isAdmin();
+      allow update, delete: if isAuthenticated() && (resource.data.clientId == request.auth.uid || isAdmin());
+    }
+
+    match /proposals/{proposalId} {
+      allow read: if true;
+      allow create: if isAuthenticated() || isAdmin();
+      allow update, delete: if isAuthenticated() && (resource.data.freelancerId == request.auth.uid || isAdmin());
+    }
+
+    // 4. Orders & Enrollments
+    match /orders/{orderId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if isAuthenticated() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /marketplaceOrders/{orderId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if isAuthenticated() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /enrollments/{enrollmentId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 5. Contact Inquiries & Feedback
+    match /contactMessages/{messageId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // 6. Direct Messages & Notifications
+    match /directMessages/{messageId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if true;
+      allow write: if isAuthenticated() || isAdmin();
+    }
+
+    // 7. Academic / Student Assignments & Submissions
+    match /assignments/{assignmentId} {
+      allow read: if true;
+      allow write: if isAuthenticated() || isAdmin();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /liveSessions/{sessionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 8. Teacher Payouts & Notices
+    match /payouts/{payoutId} {
+      allow read: if isAuthenticated() || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /teacherNotices/{noticeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 9. Customer Custom Projects & Bills
+    match /customerProjects/{projectId} {
+      allow read: if true;
+      allow write: if isAuthenticated() || isAdmin();
+    }
+
+    match /companyBills/{billId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Default fallback
+    match /{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
